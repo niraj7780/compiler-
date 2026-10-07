@@ -37,6 +37,7 @@ app.use(
         'form-action': ["'self'"],
       },
     },
+    frameguard: { action: 'deny' },
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: 'same-origin' },
   })
@@ -66,10 +67,11 @@ const runLimiter = rateLimit({
 
 app.use(express.json({ limit: '256kb' }));
 
-// Monaco editor assets served straight from node_modules.
+// Monaco editor assets served straight from node_modules:
+// /monaco/vs/... -> node_modules/monaco-editor/min/vs/...
 app.use(
   '/monaco',
-  express.static(path.join(__dirname, '..', 'node_modules', 'monaco-editor', 'min', 'vs'), {
+  express.static(path.join(__dirname, '..', 'node_modules', 'monaco-editor', 'min'), {
     fallthrough: true,
     maxAge: '1h',
     setHeaders: (res, filePath) => {

@@ -9,6 +9,7 @@
     "dev": "node --watch server/index.js",
     "warmup": "node server/sandbox/warmup.js",
     "test": "node test/smoke.js",
+    "test:ui": "node test/ui.js",
     "images": "bash docker/build.sh"
   },
   "engines": {
