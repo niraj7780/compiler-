@@ -19,7 +19,9 @@ const LANGUAGES = [
     build: '',
     run: 'python3 main.py',
     starter: `# Python
-name = input().strip() or "world"
+import sys
+
+name = sys.stdin.readline().strip() or "world"
 print(f"Hello, {name}!")
 `,
     input: 'DevCode',
@@ -34,11 +36,13 @@ print(f"Hello, {name}!")
     build: '',
     run: 'node main.js',
     starter: `// JavaScript (Node.js)
-const name = (await readline()).trim() || "world";
+const fs = require("fs");
+const line = fs.readFileSync(0, "utf8").split("\\n")[0] || "";
+const name = line.trim() || "world";
+
 console.log(\`Hello, \${name}!\`);
 `,
     input: 'DevCode',
-    note: 'Top-level await is supported.',
   },
   {
     id: 'typescript',
@@ -47,15 +51,30 @@ console.log(\`Hello, \${name}!\`);
     ext: 'ts',
     image: 'devcode/ts:1',
     versionCmd: ['tsc', '--version'],
-    build: 'tsc --strict --target es2020 --module commonjs main.ts',
+    build:
+      'tsc --strict --target es2020 --lib es2020 --module commonjs main.ts globals.d.ts',
     run: 'node main.js',
+    extraFiles: {
+      'globals.d.ts':
+        'declare const require: (id: string) => any;\n' +
+        'declare const process: any;\n' +
+        'declare const console: {\n' +
+        '  log(...args: any[]): void;\n' +
+        '  error(...args: any[]): void;\n' +
+        '  warn(...args: any[]): void;\n' +
+        '  info(...args: any[]): void;\n' +
+        '};\n',
+    },
     starter: `// TypeScript
-const name: string = "world";
+const fs = require("fs");
+const line: string = fs.readFileSync(0, "utf8").split("\\n")[0] || "";
+const name: string = line.trim() || "world";
+
 const greet = (who: string): string => \`Hello, \${who}!\`;
 
 console.log(greet(name));
 `,
-    input: '',
+    input: 'DevCode',
   },
   {
     id: 'java',
@@ -133,8 +152,9 @@ int main() {
     ext: 'go',
     image: 'golang:1.23-alpine',
     versionCmd: ['go', 'version'],
-    build: 'GOFLAGS=-mod=mod go build -o prog main.go',
+    build: 'go build -o prog main.go',
     run: './prog',
+    sharedCache: 'gocache',
     starter: `package main
 
 import (
@@ -154,7 +174,7 @@ func main() {
 }
 `,
     input: 'DevCode',
-    env: { GO111MODULE: 'off', GOCACHE: '/tmp/gocache', GOPATH: '/tmp/gopath' },
+    env: { GO111MODULE: 'off', GOPATH: '/tmp/gopath' },
   },
   {
     id: 'ruby',
@@ -217,7 +237,7 @@ print "Hello, $name!\\n";
     run: 'bash main.sh',
     starter: `#!/usr/bin/env bash
 # Bash
-read -r name || name=""
+read -r name
 name="\${name:-world}"
 echo "Hello, \${name}!"
 `,
@@ -238,6 +258,8 @@ function publicList() {
     monaco: l.monaco,
     ext: l.ext,
     file: l.mainFile || `main.${l.ext}`,
+    starter: l.starter,
+    input: l.input || '',
     note: l.note || undefined,
   }));
 }

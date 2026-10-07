@@ -39,6 +39,9 @@ async function execute({ lang, code, stdin, timeoutMs, maxOutput }) {
     const file = lang.mainFile || `main.${lang.ext}`;
     await fsp.writeFile(path.join(workdir, file), code, { mode: 0o600 });
     await fsp.writeFile(path.join(workdir, 'stdin.txt'), stdin ?? '', { mode: 0o600 });
+    for (const [name, content] of Object.entries(lang.extraFiles || {})) {
+      await fsp.writeFile(path.join(workdir, name), content, { mode: 0o600 });
+    }
     const scriptPath = path.join(workdir, '.devcode-run.sh');
     await fsp.writeFile(scriptPath, buildScript(lang), { mode: 0o700 });
 
@@ -51,6 +54,10 @@ async function execute({ lang, code, stdin, timeoutMs, maxOutput }) {
       LANG: 'C.UTF-8',
       ...(lang.env || {}),
     };
+    if (lang.sharedCache) {
+      // Local engine keeps its own throwaway cache inside the temp dir.
+      env.GOCACHE = path.join(workdir, '.gocache');
+    }
     delete env.NODE_OPTIONS;
 
     const result = await runProcess('sh', [scriptPath], {

@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
+    "warmup": "node server/sandbox/warmup.js",
     "test": "node test/smoke.js",
     "images": "bash docker/build.sh"
   },
@@ -20,5 +21,8 @@
     "helmet": "^8.1.0",
     "monaco-editor": "^0.57.0",
     "typescript": "^5.8.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
   }
 }

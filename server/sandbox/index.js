@@ -6,7 +6,7 @@ const local = require('./local');
 const MAX_CODE_BYTES = 128 * 1024;
 const MAX_STDIN_BYTES = 64 * 1024;
 const MAX_OUTPUT = 64 * 1024;
-const TIMEOUT_MS = Number(process.env.EXEC_TIMEOUT_MS) || 15000;
+const TIMEOUT_MS = Number(process.env.EXEC_TIMEOUT_MS) || 20000;
 
 let preferredEngine = (process.env.EXECUTOR || 'auto').toLowerCase();
 let dockerCheckedAt = 0;

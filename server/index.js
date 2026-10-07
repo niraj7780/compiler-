@@ -9,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 
 const { getLanguage, publicList } = require('./languages');
 const sandbox = require('./sandbox');
+const warmup = require('./sandbox/warmup');
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -63,14 +64,7 @@ const runLimiter = rateLimit({
   message: { error: 'Run limit reached (20 executions/minute). Try again shortly.' },
 });
 
-app.use(
-  express.json({
-    limit: '256kb',
-    verify: (req, res, buf) => {
-      if (buf.length === 0) return;
-    },
-  })
-);
+app.use(express.json({ limit: '256kb' }));
 
 // Monaco editor assets served straight from node_modules.
 app.use(
@@ -94,6 +88,7 @@ app.get('/api/health', async (req, res) => {
     ok: true,
     engine,
     docker: engine === 'docker',
+    cache: warmup.state(),
     uptime: Math.round((Date.now() - startedAt) / 1000),
     node: process.version,
     platform: `${os.type()} ${os.arch()}`,
@@ -128,6 +123,7 @@ app.post('/api/run', runLimiter, async (req, res, next) => {
       exitCode: result.exitCode,
       signal: result.signal || null,
       timedOut: result.timedOut,
+      compileError: Boolean(result.compileError),
       truncated: result.truncated,
       engine: result.engine,
       degraded: Boolean(result.degraded),
@@ -166,6 +162,10 @@ if (require.main === module) {
     const engine = await sandbox.currentEngine();
     console.log(`DevCode compiler listening on http://localhost:${addr.port}`);
     console.log(`Execution engine: ${engine}${engine === 'local' ? ' (docker unavailable)' : ''}`);
+    if (engine === 'docker' && process.env.WARMUP !== '0') {
+      console.log('[warmup] preparing shared Go build cache in the background…');
+      warmup.warm().catch(() => {});
+    }
   });
 }
 
