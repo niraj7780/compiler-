@@ -1,0 +1,7 @@
+# Keep the upload small: only the app, its assets and dependencies matter.
+.cache/
+.git/
+test/
+docker/
+*.log
+.DS_Store

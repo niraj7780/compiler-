@@ -1,5 +1,7 @@
 'use strict';
 
+const toolchains = require('./toolchains');
+
 /**
  * Language registry for the online compiler.
  * Every entry describes how to build/run the code inside the sandbox image,
@@ -251,17 +253,25 @@ function getLanguage(id) {
   return byId.get(id) || null;
 }
 
-function publicList() {
-  return LANGUAGES.map((l) => ({
-    id: l.id,
-    name: l.name,
-    monaco: l.monaco,
-    ext: l.ext,
-    file: l.mainFile || `main.${l.ext}`,
-    starter: l.starter,
-    input: l.input || '',
-    note: l.note || undefined,
-  }));
+function publicList({ engine } = {}) {
+  return LANGUAGES.map((l) => {
+    // The Docker engine ships every toolchain in its image; only the host
+    // (local engine / serverless) needs the binary installed.
+    const available = engine === 'docker' || toolchains.isAvailable(l);
+    return {
+      id: l.id,
+      name: l.name,
+      monaco: l.monaco,
+      ext: l.ext,
+      file: l.mainFile || `main.${l.ext}`,
+      starter: l.starter,
+      input: l.input || '',
+      available,
+      note: available
+        ? l.note || undefined
+        : `Needs the \`${toolchains.missingTool(l)}\` toolchain, which is not installed on this host.`,
+    };
+  });
 }
 
 module.exports = { LANGUAGES, getLanguage, publicList };

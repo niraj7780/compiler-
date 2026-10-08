@@ -84,7 +84,18 @@ async function main() {
         assert(typeof l.starter === 'string' && l.starter.length > 0, `${l.id}: no starter`);
         assert(l.monaco, `${l.id}: no monaco id`);
         assert(l.file, `${l.id}: no file name`);
+        assert(typeof l.available === 'boolean', `${l.id}: no available flag`);
       }
+    });
+
+    await check('toolchain probe detects missing binaries', async () => {
+      const toolchains = require('../server/toolchains');
+      const ghost = { id: 'ghost', versionCmd: ['definitely-not-installed-xyz', '--version'] };
+      assert(toolchains.isAvailable(ghost) === false, 'missing binary reported as available');
+      assert(
+        toolchains.isAvailable({ id: 'node', versionCmd: ['node', '--version'] }) === true,
+        'node should always be available'
+      );
     });
 
     await check('frontend shell is served', async () => {

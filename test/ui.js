@@ -61,6 +61,43 @@ async function main() {
       }
     });
 
+    await check('unavailable languages are disabled and never auto-selected', async () => {
+      const res = await fetch(base + '/api/languages');
+      const { languages } = await res.json();
+      const unavailable = languages.filter((l) => l.available === false).map((l) => l.id);
+      const disabled = await page.$$eval('#language option', (opts) =>
+        opts.filter((o) => o.disabled).map((o) => o.value)
+      );
+      assert(
+        disabled.length === unavailable.length && unavailable.every((id) => disabled.includes(id)),
+        `disabled=${disabled} unavailable=${unavailable}`
+      );
+      if (!unavailable.length) return;
+
+      const selected = await page.$eval('#language', (sel) => sel.value);
+      assert(!unavailable.includes(selected), `selected an unavailable language: ${selected}`);
+
+      // A stored preference for a language this host cannot run must be ignored.
+      await page.evaluate(
+        (id) => window.localStorage.setItem('devcode.lang', id),
+        unavailable[0]
+      );
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('#language', { timeout: 10000 });
+      await page.waitForFunction(
+        (id) => {
+          const sel = document.querySelector('#language');
+          const opt = sel && sel.options[sel.selectedIndex];
+          return Boolean(sel && sel.value && sel.value !== id && !(opt && opt.disabled));
+        },
+        unavailable[0],
+        { timeout: 10000 }
+      );
+      await page.evaluate(() => window.localStorage.removeItem('devcode.lang'));
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('.monaco-editor', { timeout: 20000 });
+    });
+
     await check('dark/light toggle switches theme', async () => {
       const before = await page.getAttribute('html', 'data-theme');
       await page.click('#theme-toggle');

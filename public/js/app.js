@@ -273,12 +273,22 @@
 
   /* ----------------------------- languages ----------------------------- */
 
+  function isAvailable(lang) {
+    return Boolean(lang) && lang.available !== false;
+  }
+
   function renderLanguageSelect() {
     els.lang.textContent = '';
     state.languages.forEach(function (l) {
       var opt = document.createElement('option');
       opt.value = l.id;
-      opt.textContent = l.name;
+      if (isAvailable(l)) {
+        opt.textContent = l.name;
+      } else {
+        opt.disabled = true;
+        opt.textContent = l.name + ' (unavailable)';
+        if (l.note) opt.title = l.note;
+      }
       els.lang.appendChild(opt);
     });
     els.lang.value = state.currentId;
@@ -572,12 +582,25 @@
         } catch (e) {
           /* ignore */
         }
-        var initial =
-          saved && state.languages.some(function (l) {
-            return l.id === saved;
+
+        var initial = null;
+        if (
+          saved &&
+          state.languages.some(function (l) {
+            return l.id === saved && isAvailable(l);
           })
-            ? saved
-            : state.languages[0].id;
+        ) {
+          initial = saved;
+        }
+        if (!initial) {
+          for (var i = 0; i < state.languages.length; i++) {
+            if (isAvailable(state.languages[i])) {
+              initial = state.languages[i].id;
+              break;
+            }
+          }
+        }
+        if (!initial) throw new Error('No runnable language on this host.');
 
         state.currentId = initial;
         renderLanguageSelect();

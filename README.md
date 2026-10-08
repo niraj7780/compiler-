@@ -28,6 +28,36 @@ npm test           # end-to-end smoke test (API + all core languages)
 Requirements: Node.js ≥ 18 and Docker (recommended — see
 [Execution engines](#execution-engines)).
 
+## Deploying to Vercel
+
+The repository ships with a ready-made [`vercel.json`](./vercel.json), so the
+only step is importing the repo at [vercel.com/new](https://vercel.com/new)
+(or running `vercel` in the project root). No settings to fill in.
+
+How the pieces map onto Vercel:
+
+| Piece                     | On Vercel                                                        |
+| ------------------------- | ---------------------------------------------------------------- |
+| `public/**`               | Static assets served from the CDN (`/`, `/css/*`, `/js/*`).      |
+| `api/index.js`            | One serverless function running the whole Express app.           |
+| `/(.*) → /api` rewrite    | Every other path (API, `/monaco/vs/*`) reaches that function.    |
+| `node_modules/monaco-editor/min/**` | Bundled into the function so the editor loads offline. |
+
+Differences from self-hosting:
+
+- **No Docker.** The `local` engine is selected automatically, so user code
+  runs as a plain child process. Each language is then checked against the
+  host: languages whose toolchain is missing are reported as
+  `available: false`, disabled in the UI, and rejected with `503` by
+  `/api/run`. (With the Docker engine every language stays available — the
+  image provides the toolchain.) Out of the box that means JavaScript plus
+  whatever the runtime image ships; C, C++, Java and Go need the Docker
+  engine — self-host for the full set.
+- **`trust proxy` is enabled** for `X-Forwarded-For` so rate limits are keyed
+  per visitor instead of per platform IP.
+- Function duration defaults to 300 s, comfortably above the 20 s execution
+  timeout.
+
 ## Built-in languages
 
 | Language   | Image                      | Build              | Run             |
@@ -80,8 +110,9 @@ Response:
 }
 ```
 
-### `GET /api/languages` — language metadata + starter programs.
-### `GET /api/health` — engine, uptime, platform.
+### `GET /api/languages` — language metadata + starter programs, including an
+`available` flag per language (false when the host lacks that toolchain).
+### `GET /api/health` — engine, host (`self-hosted` | `vercel`), uptime, platform.
 
 ## Security model
 
@@ -99,6 +130,8 @@ Response:
 ## Project structure
 
 ```
+├── api/index.js          # Vercel serverless entry (exports the Express app)
+├── vercel.json           # Vercel routing, static output, bundled assets
 ├── public/               # frontend
 │   ├── index.html        # app shell (header, editor, console, status bar)
 │   ├── css/styles.css    # design tokens, dark/light themes, responsive layout
@@ -106,6 +139,7 @@ Response:
 ├── server/
 │   ├── index.js          # express app, security middleware, REST API
 │   ├── languages.js      # language registry (images, commands, starters)
+│   ├── toolchains.js     # host toolchain probe (available flag, 503 responses)
 │   └── sandbox/
 │       ├── index.js      # engine selection + validation + limits
 │       ├── docker.js      # container executor

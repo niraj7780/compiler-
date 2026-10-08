@@ -9,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 
 const { getLanguage, publicList } = require('./languages');
 const sandbox = require('./sandbox');
+const toolchains = require('./toolchains');
 const warmup = require('./sandbox/warmup');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -17,6 +18,13 @@ const startedAt = Date.now();
 
 const app = express();
 app.disable('x-powered-by');
+
+// Behind a proxy (Vercel) the socket address is the platform, not the
+// visitor: trust the first `X-Forwarded-For` hop so rate limits key on the
+// real client IP instead of collapsing every visitor into one bucket.
+if (process.env.VERCEL) {
+  app.set('trust proxy', 1);
+}
 
 app.use(
   helmet({
@@ -94,11 +102,13 @@ app.get('/api/health', async (req, res) => {
     uptime: Math.round((Date.now() - startedAt) / 1000),
     node: process.version,
     platform: `${os.type()} ${os.arch()}`,
+    host: process.env.VERCEL ? 'vercel' : 'self-hosted',
   });
 });
 
-app.get('/api/languages', (req, res) => {
-  res.json({ languages: publicList() });
+app.get('/api/languages', async (req, res) => {
+  const engine = await sandbox.currentEngine();
+  res.json({ languages: publicList({ engine }) });
 });
 
 app.post('/api/run', runLimiter, async (req, res, next) => {
@@ -106,6 +116,14 @@ app.post('/api/run', runLimiter, async (req, res, next) => {
     const { language, code, stdin } = req.body || {};
     const lang = getLanguage(language);
     sandbox.validate({ language, code, stdin, lang });
+
+    if ((await sandbox.currentEngine()) !== 'docker' && !toolchains.isAvailable(lang)) {
+      return res.status(503).json({
+        error:
+          `${lang.name} cannot run on this host: the \`${toolchains.missingTool(lang)}\` ` +
+          'toolchain is not installed. Self-host with Docker (see README) to run every language.',
+      });
+    }
 
     const result = await sandbox.execute({
       lang,

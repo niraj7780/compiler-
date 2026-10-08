@@ -8,7 +8,8 @@ const MAX_STDIN_BYTES = 64 * 1024;
 const MAX_OUTPUT = 64 * 1024;
 const TIMEOUT_MS = Number(process.env.EXEC_TIMEOUT_MS) || 20000;
 
-let preferredEngine = (process.env.EXECUTOR || 'auto').toLowerCase();
+// Serverless hosts (Vercel) have no Docker daemon - skip the probe entirely.
+let preferredEngine = (process.env.EXECUTOR || (process.env.VERCEL ? 'local' : 'auto')).toLowerCase();
 let dockerCheckedAt = 0;
 let dockerAvailable = false;
 
