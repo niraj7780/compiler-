@@ -9,7 +9,10 @@ const path = require('node:path');
 const { runProcess } = require('./process');
 
 const COMPILE_SENTINEL = '.devcode-compile-error';
-const CACHE_ROOT = path.join(__dirname, '..', '..', '.cache');
+// Overridable so a containerized server can put the cache at a path that is
+// identical inside the container and on the Docker host (bind-mount parity).
+const CACHE_ROOT =
+  process.env.DEVCODE_CACHE_DIR || path.join(__dirname, '..', '..', '.cache');
 
 function cacheDir(name) {
   return path.join(CACHE_ROOT, name);
@@ -135,7 +138,11 @@ function isDaemonDown(result) {
 }
 
 async function execute({ lang, code, stdin, timeoutMs, maxOutput }) {
-  const workdir = await fsp.mkdtemp(path.join(os.tmpdir(), 'devcode-'));
+  // os.tmpdir() may point at a directory that only exists on the host (the
+  // compose bind mount hides whatever the image pre-created).
+  const tmpRoot = os.tmpdir();
+  await fsp.mkdir(tmpRoot, { recursive: true }).catch(() => {});
+  const workdir = await fsp.mkdtemp(path.join(tmpRoot, 'devcode-'));
   const started = Date.now();
   const tag = crypto.randomBytes(6).toString('hex');
 

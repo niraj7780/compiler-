@@ -1,0 +1,18 @@
+# One-command self-host: docker compose up -d --build
+# Serves DevCode on :3000 and runs user code in Docker sandbox containers.
+services:
+  devcode:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      # Drive the host Docker daemon (docker-outside-of-docker).
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Host bind (not a named volume): sandbox containers mount work dirs
+      # and the Go build cache by absolute path, so the path must resolve
+      # identically on the host and inside this container.
+      - /var/lib/devcode:/var/lib/devcode
+    environment:
+      TMPDIR: /var/lib/devcode/tmp
+      DEVCODE_CACHE_DIR: /var/lib/devcode/cache
+    restart: unless-stopped

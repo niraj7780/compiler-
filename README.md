@@ -28,6 +28,47 @@ npm test           # end-to-end smoke test (API + all core languages)
 Requirements: Node.js ≥ 18 and Docker (recommended — see
 [Execution engines](#execution-engines)).
 
+## Self-hosting (all 11 languages)
+
+Vercel has no Docker daemon and no compilers, so only the languages the host
+can run work there. On your own machine **every language works** — the Docker
+engine ships each toolchain in its image.
+
+**Option A — machine with Node.js and Docker (the full test suite runs here):**
+
+```bash
+git clone https://github.com/niraj7780/compiler- && cd compiler-
+npm install
+npm run images      # build devcode/ts:1 and devcode/perl:1 (once)
+npm start           # http://localhost:3000
+```
+
+**Option B — any Docker host, no Node.js needed (VPS, bare metal):**
+
+```bash
+git clone https://github.com/niraj7780/compiler- && cd compiler-
+docker compose up -d --build      # http://localhost:3000
+```
+
+The compose setup mounts the host Docker socket and a shared data directory
+(`/var/lib/devcode`) so sandbox containers can bind-mount work directories by
+absolute path. On first boot the app builds any missing custom images and
+warms the Go build cache in the background — no extra steps.
+
+Plain `docker run` equivalent:
+
+```bash
+docker build -t devcode .
+docker run -d --name devcode -p 3000:3000 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /var/lib/devcode:/var/lib/devcode \
+  devcode
+```
+
+Note: the server container needs access to the Docker socket, which is root
+equivalent — expose it only on hosts you trust (put it behind a reverse proxy
+with TLS before serving it publicly).
+
 ## Deploying to Vercel
 
 The repository ships with a ready-made [`vercel.json`](./vercel.json), so the
@@ -132,6 +173,8 @@ Response:
 ```
 ├── api/index.js          # Vercel serverless entry (exports the Express app)
 ├── vercel.json           # Vercel routing, static output, bundled assets
+├── Dockerfile            # app image for self-hosting (drives the host daemon)
+├── docker-compose.yml    # one-command self-host: docker compose up -d --build
 ├── public/               # frontend
 │   ├── index.html        # app shell (header, editor, console, status bar)
 │   ├── css/styles.css    # design tokens, dark/light themes, responsive layout
@@ -144,7 +187,8 @@ Response:
 │       ├── index.js      # engine selection + validation + limits
 │       ├── docker.js      # container executor
 │       ├── local.js       # host fallback executor
-│       └── process.js     # bounded child-process runner
+│       ├── process.js     # bounded child-process runner
+│       └── warmup.js      # custom image build + Go cache warm-up
 ├── docker/               # Dockerfiles for custom images
 └── test/smoke.js         # end-to-end test suite
 ```

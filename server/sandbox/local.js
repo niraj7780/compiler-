@@ -32,7 +32,9 @@ function buildScript(lang) {
 }
 
 async function execute({ lang, code, stdin, timeoutMs, maxOutput }) {
-  const workdir = await fsp.mkdtemp(path.join(os.tmpdir(), 'devcode-local-'));
+  const tmpRoot = os.tmpdir();
+  await fsp.mkdir(tmpRoot, { recursive: true }).catch(() => {});
+  const workdir = await fsp.mkdtemp(path.join(tmpRoot, 'devcode-local-'));
   const started = Date.now();
 
   try {
