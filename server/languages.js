@@ -111,6 +111,7 @@ public class Main {
     build: 'gcc -O2 -std=c17 -Wall -o prog main.c',
     run: './prog',
     starter: `#include <stdio.h>
+#include <string.h>
 
 int main(void) {
     char name[64];

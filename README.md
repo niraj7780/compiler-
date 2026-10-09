@@ -55,7 +55,7 @@ Differences from self-hosting:
   engine — self-host for the full set.
 - **`trust proxy` is enabled** for `X-Forwarded-For` so rate limits are keyed
   per visitor instead of per platform IP.
-- Function duration defaults to 300 s, comfortably above the 20 s execution
+- Function duration is set to 300 s, comfortably above the 20 s execution
   timeout.
 
 ## Built-in languages
@@ -65,7 +65,7 @@ Differences from self-hosting:
 | Python     | `python:3.12-slim`         | —                  | `python3 main.py` |
 | JavaScript | `node:22-slim`             | —                  | `node main.js`  |
 | TypeScript | `devcode/ts:1`             | `tsc --strict …`   | `node main.js`  |
-| Java       | `eclipse-temurin:21-jdk`   | `javac Main.java`  | `java Main`     |
+| Java       | `eclipse-temurin:21-jdk-jammy` | `javac -encoding UTF-8 Main.java` | `java -XX:+UseSerialGC -Xmx192m -cp . Main` |
 | C          | `gcc:13.2`                 | `gcc -std=c17 …`   | `./prog`        |
 | C++        | `gcc:13.2`                 | `g++ -std=c++17 …` | `./prog`        |
 | Go         | `golang:1.23-alpine`       | `go build …`       | `./prog`        |
@@ -84,11 +84,11 @@ npm run images    # runs docker/build.sh
 
 | Engine  | Isolation                                                                  |
 | ------- | -------------------------------------------------------------------------- |
-| `docker` (default) | Fresh container per run: no network, read-only filesystem, `cap-drop=ALL`, `no-new-privileges`, non-root user, 256 MB RAM, 0.5 CPU, 64 PIDs, 15 s timeout. |
+| `docker` (default) | Fresh container per run: no network, read-only filesystem, `cap-drop=ALL`, `no-new-privileges`, non-root user, 384 MB RAM, 1 CPU, 64 PIDs, 20 s timeout. |
 | `local`  | Fallback used only when the Docker daemon is unavailable. Runs `sh` in a private temp directory on the host — weaker isolation, flagged as `degraded` in API responses. |
 
 Force an engine with `EXECUTOR=docker|local|auto` (default `auto`), and tune the
-timeout with `EXEC_TIMEOUT_MS` (default `15000`).
+timeout with `EXEC_TIMEOUT_MS` (default `20000`).
 
 ## API
 

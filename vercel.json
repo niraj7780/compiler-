@@ -4,7 +4,8 @@
   "outputDirectory": "public",
   "functions": {
     "api/index.js": {
-      "includeFiles": "{public/**,node_modules/monaco-editor/min/**}"
+      "includeFiles": "{public/**,node_modules/monaco-editor/min/**}",
+      "maxDuration": 300
     }
   },
   "rewrites": [
